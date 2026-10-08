@@ -1,137 +1,68 @@
-const categories = {
-  "Autoestima": [
-    "Cuide de si mesmo como cuidaria de alguém que você ama.",
-    "Você é suficiente, exatamente como é.",
-    "Valorize suas conquistas, por menores que sejam.",
-    "Aceitar-se é iniciar um lindo processo de transformação.",
-    "A sua opinião sobre você é mais importante do que a dos outros.",
-    "Compare-se menos, celebre suas singularidades.",
-  ],
-  "Resiliência": [
-    "Cada desafio é uma oportunidade para crescer.",
-    "Confie na capacidade que você tem de superar momentos difíceis.",
-    "Fracassos são passos para o sucesso.",
-    "A adversidade revela forças que não conhecíamos.",
-    "Permita-se recomeçar quantas vezes for necessário.",
-    "A calma diante das dificuldades é sinal de coragem.",
-  ],
-  "Autoconhecimento": [
-    "Olhe para dentro e descubra sua verdade.",
-    "Questionar-se é o primeiro ato do despertar.",
-    "Seja honesto consigo mesmo: a mudança começa aí.",
-    "O autoconhecimento é a chave para escolhas mais conscientes.",
-    "Sinta, escute e respeite suas emoções.",
-    "Permita-se conhecer quem você é agora.",
-  ],
-  "Relacionamentos": [
-    "Relações saudáveis exigem diálogo e escuta ativa.",
-    "Dizer 'não' também é um ato de amor próprio.",
-    "Empatia é o melhor presente que podemos oferecer ao outro.",
-    "Valorize as pequenas gentilezas do dia a dia.",
-    "É saudável impor limites, inclusive com quem amamos.",
-    "O respeito é a base de qualquer relação verdadeira.",
-  ],
-  "Gratidão": [
-    "A gratidão transforma o que temos em suficiente.",
-    "Reconheça e celebre as pequenas alegrias do cotidiano.",
-    "Ser grato libera leveza e amor.",
-    "Olhe ao redor: há motivos para agradecer, mesmo nos dias difíceis.",
-    "Agradecer conecta mente e coração.",
-    "Cultivar gratidão é um caminho para a felicidade.",
-  ],
-  "Luto": [
-    "Permita-se viver o luto no seu tempo e do seu jeito.",
-    "Sentir saudade é também uma forma de amor.",
-    "Nenhum sentimento é errado durante o luto; acolha o que vier.",
-    "Você não precisa ser forte o tempo todo.",
-    "O processo de luto não é linear, respeite seus altos e baixos.",
-    "Compartilhar sua dor pode aliviar o peso do coração.",
-    "A memória de quem se foi pode ser um abrigo de carinho.",
-    "Dê a si mesmo compaixão ao vivenciar perdas.",
-    "O luto é um processo, não um obstáculo a ser superado.",
-    "Permita-se procurar apoio quando necessário."
-  ]
-};
-
-const categorySelect = document.getElementById('category');
-const drawBtn = document.getElementById('draw-card-btn');
-const cardDiv = document.getElementById('card');
-const cardTextDiv = document.getElementById('card-text');
-const historyList = document.getElementById('history-list');
-
-// Populate category selector
-function populateCategories() {
-  for (const cat in categories) {
-    const opt = document.createElement('option');
-    opt.value = cat;
-    opt.textContent = cat;
-    categorySelect.appendChild(opt);
-  }
+import { prompts } from "./acervo.js";
+const el = (id) => document.getElementById(id);
+const category = el("category");
+let pile = [];
+let used = [];
+let starred = [];
+let active = "";
+for (const [name, list] of Object.entries(prompts)) {
+ const option = document.createElement("option");
+ option.value = name;
+ option.textContent = name + " (" + list.length + ")";
+ category.append(option);
 }
-populateCategories();
-
-// Util to shuffle array (Fisher-Yates)
-function shuffle(array) {
-  let cur = array.length, rand;
-  while (cur !== 0) {
-    rand = Math.floor(Math.random() * cur);
-    cur--;
-    [array[cur], array[rand]] = [array[rand], array[cur]];
-  }
-  return array;
+function mix(list) {
+ const shuffled = [...list];
+ for (let index = shuffled.length - 1; index > 0; index--) {
+  const pick = Math.floor(Math.random() * (index + 1));
+  [shuffled[index], shuffled[pick]] = [shuffled[pick], shuffled[index]];
+ }
+ return shuffled;
 }
-
-let cardQueue = [];
-let currentCategory = categorySelect.value;
-let revealedHistory = [];
-
-// (Re)shuffle cards for current category
-function refreshCardQueue(cat) {
-  cardQueue = shuffle([...categories[cat]]);
+function drawList(id, values) {
+ const target = el(id);
+ target.replaceChildren();
+ for (const phrase of [...values].reverse()) {
+  const item = document.createElement("li");
+  item.textContent = phrase;
+  target.append(item);
+ }
 }
-
-function showCard(text) {
-  cardDiv.classList.add('hidden');
-  setTimeout(() => {
-    cardTextDiv.textContent = `"${text}"`;
-    cardDiv.classList.remove('hidden');
-  }, 200);
+function paint() {
+ el("progress").textContent = used.length + " de " + prompts[category.value].length + " cartas reveladas neste tema.";
+ el("history-count").textContent = "(" + used.length + ")";
+ el("favorite-count").textContent = "(" + starred.length + ")";
+ el("draw-card-btn").textContent = pile.length ? "Revelar próxima carta" : "Recomeçar baralho";
+ drawList("history-list", used);
+ drawList("favorites-list", starred);
 }
-
-function updateHistory() {
-  historyList.innerHTML = '';
-  revealedHistory.slice().reverse().forEach(item => {
-    const li = document.createElement('li');
-    li.textContent = item;
-    historyList.appendChild(li);
-  });
+function reset() {
+ pile = mix(prompts[category.value]);
+ used = [];
+ active = "";
+ el("card-text").textContent = "Revele uma carta para começar.";
+ el("card-category").textContent = category.value;
+ el("favorite-btn").disabled = true;
+ el("favorite-btn").textContent = "☆ Favoritar";
+ paint();
 }
-
-// Draw card handler
-drawBtn.addEventListener('click', () => {
-  if (cardQueue.length === 0) {
-    // If all phrases are drawn, reshuffle for new session
-    refreshCardQueue(currentCategory);
-  }
-  const card = cardQueue.pop();
-  if (card) {
-    showCard(card);
-    revealedHistory.push(card);
-    updateHistory();
-  }
+el("draw-card-btn").addEventListener("click", () => {
+ if (!pile.length) pile = mix(prompts[category.value]);
+ active = pile.pop();
+ used.push(active);
+ el("card-text").textContent = active;
+ el("card-category").textContent = category.value;
+ el("favorite-btn").disabled = false;
+ el("favorite-btn").textContent = starred.includes(active) ? "★ Favoritada" : "☆ Favoritar";
+ paint();
+ el("card").focus();
 });
-
-// Switch category handler
-categorySelect.addEventListener('change', (e) => {
-  currentCategory = e.target.value;
-  refreshCardQueue(currentCategory);
-  revealedHistory = [];
-  cardDiv.classList.add('hidden');
-  updateHistory();
+el("favorite-btn").addEventListener("click", () => {
+ if (!active) return;
+ starred = starred.includes(active) ? starred.filter(value => value !== active) : [...starred, active];
+ el("favorite-btn").textContent = starred.includes(active) ? "★ Favoritada" : "☆ Favoritar";
+ paint();
 });
-
-// Initial state
-categorySelect.selectedIndex = 0;
-refreshCardQueue(categorySelect.value);
-cardDiv.classList.add('hidden');
-updateHistory();
+category.addEventListener("change", reset);
+el("restart-btn").addEventListener("click", reset);
+reset();
