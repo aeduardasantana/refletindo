@@ -29,10 +29,10 @@ function drawList(id, values) {
  }
 }
 function paint() {
- el("progress").textContent = used.length + " de " + prompts[category.value].length + " cartas reveladas neste tema.";
+ el("progress").textContent = used.length + " de " + prompts[category.value].length + " questões apresentadas neste tema.";
  el("history-count").textContent = "(" + used.length + ")";
  el("favorite-count").textContent = "(" + starred.length + ")";
- el("draw-card-btn").textContent = pile.length ? "Revelar próxima carta" : "Recomeçar baralho";
+ el("draw-card-btn").textContent = pile.length ? "Apresentar próxima questão" : "Reiniciar sequência";
  drawList("history-list", used);
  drawList("favorites-list", starred);
 }
@@ -40,7 +40,7 @@ function reset() {
  pile = mix(prompts[category.value]);
  used = [];
  active = "";
- el("card-text").textContent = "Revele uma carta para começar.";
+ el("card-text").textContent = "Selecione uma questão para começar.";
  el("card-category").textContent = category.value;
  el("favorite-btn").disabled = true;
  el("favorite-btn").textContent = "☆ Favoritar";
